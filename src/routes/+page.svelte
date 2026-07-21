@@ -40,6 +40,8 @@
 	let lookupErrorMessage = $state('');
 
 	// Booking outcome
+	let isBooking = $state(false);
+	let bookingError = $state('');
 	let bookingSuccess = $state(false);
 	let createdAppointment = $state<any>(null);
 	let createdPatient = $state<any>(null);
@@ -85,7 +87,7 @@
 		}
 	}
 
-	function handleBooking(e: Event) {
+	async function handleBooking(e: Event) {
 		e.preventDefault();
 
 		if (!selectedDoctorId || !bookingDate || !bookingTimeSlot || !patientName || !patientPhone || !patientNik) {
@@ -93,57 +95,66 @@
 			return;
 		}
 
-		let targetPatient: any;
+		isBooking = true;
+		bookingError = '';
 
-		// 1. Check or create Patient
-		const existing = clinicStore.patients.find(p => p.nik.trim() === patientNik.trim());
-		if (existing) {
-			targetPatient = existing;
-			// Update patient details just in case
-			existing.name = patientName;
-			existing.phone = patientPhone;
-			existing.dob = patientDob;
-			existing.gender = patientGender;
-			clinicStore.updatePatient(existing);
-		} else {
-			targetPatient = clinicStore.addPatient({
-				name: patientName,
-				nik: patientNik,
-				dob: patientDob,
-				gender: patientGender,
-				phone: patientPhone,
-				address: 'Daftar Online (Alamat belum diisi)',
-				allergies: 'Tidak diketahui (Daftar Online)'
+		try {
+			let targetPatient: any;
+
+			// 1. Check or create Patient
+			const existing = clinicStore.patients.find(p => p.nik.trim() === patientNik.trim());
+			if (existing) {
+				targetPatient = existing;
+				// Update patient details just in case
+				existing.name = patientName;
+				existing.phone = patientPhone;
+				existing.dob = patientDob;
+				existing.gender = patientGender;
+				await clinicStore.updatePatient(existing);
+			} else {
+				targetPatient = await clinicStore.addPatient({
+					name: patientName,
+					nik: patientNik,
+					dob: patientDob,
+					gender: patientGender,
+					phone: patientPhone,
+					address: 'Daftar Online (Alamat belum diisi)',
+					allergies: 'Tidak diketahui (Daftar Online)'
+				});
+			}
+
+			// 2. Create Appointment
+			const doc = clinicStore.doctors.find(d => d.id === selectedDoctorId);
+			const newApt = await clinicStore.addAppointment({
+				patientId: targetPatient.id,
+				patientName: targetPatient.name,
+				patientPhone: targetPatient.phone,
+				doctorId: selectedDoctorId,
+				doctorName: doc ? doc.name : 'Dokter Medika',
+				date: bookingDate,
+				timeSlot: bookingTimeSlot,
+				symptoms: symptoms || 'Pemeriksaan Kesehatan Umum'
 			});
+
+			// 3. Generate queue number (e.g. A-12, B-03 depending on doctor specialty)
+			const docPrefix = doc ? doc.specialty.includes('Anak') ? 'A' : doc.specialty.includes('Dalam') ? 'B' : doc.specialty.includes('Jantung') ? 'C' : 'G' : 'M';
+			const dailyIndex = clinicStore.appointments.filter(a => a.date === bookingDate && a.doctorId === selectedDoctorId).length;
+			queueNumber = `${docPrefix}-${String(dailyIndex).padStart(2, '0')}`;
+
+			// 4. Set Success state
+			createdPatient = targetPatient;
+			createdAppointment = newApt;
+			bookingSuccess = true;
+
+			// Scroll to success card
+			setTimeout(() => {
+				document.getElementById('booking-result')?.scrollIntoView({ behavior: 'smooth' });
+			}, 100);
+		} catch (err: any) {
+			bookingError = err?.message || 'Terjadi kesalahan saat memproses pendaftaran. Silakan coba lagi.';
+		} finally {
+			isBooking = false;
 		}
-
-		// 2. Create Appointment
-		const doc = clinicStore.doctors.find(d => d.id === selectedDoctorId);
-		const newApt = clinicStore.addAppointment({
-			patientId: targetPatient.id,
-			patientName: targetPatient.name,
-			patientPhone: targetPatient.phone,
-			doctorId: selectedDoctorId,
-			doctorName: doc ? doc.name : 'Dokter Medika',
-			date: bookingDate,
-			timeSlot: bookingTimeSlot,
-			symptoms: symptoms || 'Pemeriksaan Kesehatan Umum'
-		});
-
-		// 3. Generate queue number (e.g. A-12, B-03 depending on doctor specialty)
-		const docPrefix = doc ? doc.specialty.includes('Anak') ? 'A' : doc.specialty.includes('Dalam') ? 'B' : doc.specialty.includes('Jantung') ? 'C' : 'G' : 'M';
-		const dailyIndex = clinicStore.appointments.filter(a => a.date === bookingDate && a.doctorId === selectedDoctorId).length;
-		queueNumber = `${docPrefix}-${String(dailyIndex).padStart(2, '0')}`;
-
-		// 4. Set Success state
-		createdPatient = targetPatient;
-		createdAppointment = newApt;
-		bookingSuccess = true;
-
-		// Scroll to success card
-		setTimeout(() => {
-			document.getElementById('booking-result')?.scrollIntoView({ behavior: 'smooth' });
-		}, 100);
 	}
 
 	function resetBooking() {
@@ -159,6 +170,8 @@
 		searchNik = '';
 		lookupSuccessMessage = '';
 		lookupErrorMessage = '';
+		isBooking = false;
+		bookingError = '';
 		bookingSuccess = false;
 		createdAppointment = null;
 		createdPatient = null;
@@ -739,9 +752,17 @@
 							</div>
 							</section>
 
-							<button type="submit" class="btn btn-primary btn-block btn-lg booking-submit">
-								<CheckCircle2 size={18} />
-								<span>Konfirmasi Pendaftaran Janji Temu</span>
+							{#if bookingError}
+								<p class="booking-err"><AlertCircle size={14} /> {bookingError}</p>
+							{/if}
+
+							<button type="submit" class="btn btn-primary btn-block btn-lg booking-submit" disabled={isBooking}>
+								{#if isBooking}
+									<span>Memproses Pendaftaran...</span>
+								{:else}
+									<CheckCircle2 size={18} />
+									<span>Konfirmasi Pendaftaran Janji Temu</span>
+								{/if}
 							</button>
 						</form>
 					</div>
@@ -1872,6 +1893,20 @@
 		font-weight: 700;
 	}
 	.booking-submit { margin-top: 0.35rem; }
+	.booking-submit:disabled { opacity: 0.7; cursor: not-allowed; }
+	.booking-err {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		font-size: 0.85rem;
+		font-weight: 700;
+		color: hsl(var(--danger));
+		margin-top: 0.5rem;
+		padding: 0.75rem 1rem;
+		border-radius: var(--radius-sm);
+		background-color: #fee2e2;
+		border: 1px solid hsl(var(--danger) / 0.2);
+	}
 	
 	/* Booking Sidebar */
 	.booking-info-sidebar h3 {

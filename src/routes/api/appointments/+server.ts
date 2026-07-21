@@ -42,22 +42,25 @@ export async function POST({ request, platform }) {
 	).bind(data.date, data.doctor_id).first();
 	const queueNumber = `${prefix}-${String((sameDayCount?.count as number ?? 0) + 1).padStart(3, '0')}`;
 
-	await db.prepare(
-		`INSERT INTO appointments (id, patient_id, doctor_id, date, time_slot, symptoms, status, queue_number, created_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-	).bind(nextId, data.patient_id, data.doctor_id, data.date, data.time_slot, data.symptoms ?? '', 'Pending', queueNumber, createdAt).run();
-
-	// Return with joined names for convenience
+	// Look up names before insert
 	const patient = await db.prepare('SELECT name, phone FROM patients WHERE id=?').bind(data.patient_id).first();
 	const doctorInfo = await db.prepare('SELECT name FROM doctors WHERE id=?').bind(data.doctor_id).first();
+	const patientName = (patient?.name as string) ?? '';
+	const patientPhone = (patient?.phone as string) ?? '';
+	const doctorName = (doctorInfo?.name as string) ?? '';
+
+	await db.prepare(
+		`INSERT INTO appointments (id, patient_id, patient_name, patient_phone, doctor_id, doctor_name, date, time_slot, symptoms, status, queue_number, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	).bind(nextId, data.patient_id, patientName, patientPhone, data.doctor_id, doctorName, data.date, data.time_slot, data.symptoms ?? '', 'Pending', queueNumber, createdAt).run();
 
 	return json({
 		id: nextId,
 		patient_id: data.patient_id,
-		patient_name: patient?.name,
-		patient_phone: patient?.phone,
+		patient_name: patientName,
+		patient_phone: patientPhone,
 		doctor_id: data.doctor_id,
-		doctor_name: doctorInfo?.name,
+		doctor_name: doctorName,
 		date: data.date,
 		time_slot: data.time_slot,
 		symptoms: data.symptoms ?? '',

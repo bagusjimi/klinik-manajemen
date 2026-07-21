@@ -3,6 +3,7 @@
 // Runtime types generated with workerd@1.20260515.1 2026-05-18 nodejs_als,nodejs_compat
 interface __BaseEnv_Env {
 	ASSETS: Fetcher;
+	DB: D1Database;
 }
 declare namespace Cloudflare {
 	interface Env extends __BaseEnv_Env {}

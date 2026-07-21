@@ -571,12 +571,19 @@
 					<!-- Form side -->
 					<div class="booking-form-area">
 						<div class="booking-header">
+							<span class="booking-eyebrow">Booking online</span>
 							<div class="icon-title">
 								<Calendar size={28} class="text-primary" />
-								<h2>Pendaftaran Janji Temu Online</h2>
+								<h2>Buat janji temu</h2>
 							</div>
-							<p>Silakan isi formulir di bawah ini dengan lengkap untuk mengamankan nomor antrean pemeriksaan Anda secara instan.</p>
+							<p>Isi data singkat berikut. Nomor antrean dibuat setelah pendaftaran dikonfirmasi.</p>
 						</div>
+
+						<ol class="booking-steps" aria-label="Tahapan pendaftaran">
+							<li class="is-current"><span>1</span>Data pasien</li>
+							<li><span>2</span>Pilih jadwal</li>
+							<li><span>3</span>Konfirmasi</li>
+						</ol>
 
 						<div class="patient-type-selector">
 							<button 
@@ -621,8 +628,11 @@
 						{/if}
 
 						<form onsubmit={handleBooking} class="actual-booking-form">
-							<h4 class="form-section-title">1. Data Diri Pasien</h4>
-							
+							<section class="booking-form-card">
+								<div class="form-section-heading">
+									<span class="form-section-icon"><User size={17} /></span>
+									<div><h3>Data pasien</h3><p>Gunakan data yang sesuai dengan identitas Anda.</p></div>
+								</div>
 							<div class="form-grid-2">
 								<div class="form-group">
 									<label for="p-nik">NIK Pasien *</label>
@@ -674,9 +684,13 @@
 									/>
 								</div>
 							</div>
+							</section>
 
-							<h4 class="form-section-title mt-4">2. Jadwal & Keluhan</h4>
-
+							<section class="booking-form-card">
+								<div class="form-section-heading">
+									<span class="form-section-icon"><HeartPulse size={17} /></span>
+									<div><h3>Jadwal dan keluhan</h3><p>Pilih dokter dan waktu kunjungan yang paling sesuai.</p></div>
+								</div>
 							<div class="form-group">
 								<label for="booking-doc">Pilih Dokter Spesialis *</label>
 								<select id="booking-doc" bind:value={selectedDoctorId} required>
@@ -687,6 +701,9 @@
 										</option>
 									{/each}
 								</select>
+								{#if selectedDoctor}
+									<p class="selection-hint"><CheckCircle2 size={14} /> {selectedDoctor.name} tersedia sesuai jadwal praktik.</p>
+								{/if}
 							</div>
 
 							<div class="form-grid-2">
@@ -720,8 +737,9 @@
 									bind:value={symptoms}
 								></textarea>
 							</div>
+							</section>
 
-							<button type="submit" class="btn btn-primary btn-block btn-lg mt-4">
+							<button type="submit" class="btn btn-primary btn-block btn-lg booking-submit">
 								<CheckCircle2 size={18} />
 								<span>Konfirmasi Pendaftaran Janji Temu</span>
 							</button>
@@ -730,18 +748,31 @@
 
 					<!-- Sidebar info -->
 					<div class="booking-info-sidebar">
-						<h3>Jadwal Dokter Hari Ini</h3>
-						<div class="sidebar-schedule-list">
-							{#each clinicStore.doctors as doc}
-								<div class="sidebar-doc-item">
-									<span class="doc-emoji-small">{doc.avatar}</span>
-									<div class="doc-desc">
-										<h5>{doc.name}</h5>
-										<p>{doc.specialty}</p>
-										<span class="time-label">{doc.schedule}</span>
-									</div>
-								</div>
-							{/each}
+						<div>
+							<span class="sidebar-eyebrow">Mudah dan cepat</span>
+							<h3>Tiga langkah sampai antrean</h3>
+						</div>
+						<div class="booking-guide">
+							<div><span>1</span><p><strong>Pilih tipe pasien</strong>Pasien lama cukup cari dengan NIK.</p></div>
+							<div><span>2</span><p><strong>Tentukan jadwal</strong>Pilih dokter, tanggal, dan slot kunjungan.</p></div>
+							<div><span>3</span><p><strong>Simpan tiket</strong>Cetak tiket setelah nomor antrean muncul.</p></div>
+						</div>
+						<div class="sidebar-schedule-wrap">
+							<h4>Dokter yang melayani</h4>
+							<div class="sidebar-schedule-list">
+								{#each clinicStore.doctors as doc}
+									{#if doc.status === 'Active'}
+										<div class="sidebar-doc-item">
+											<span class="doc-emoji-small">{doc.avatar}</span>
+											<div class="doc-desc">
+												<h5>{doc.name}</h5>
+												<p>{doc.specialty}</p>
+												<span class="time-label">{doc.schedule}</span>
+											</div>
+										</div>
+									{/if}
+								{/each}
+							</div>
 						</div>
 						
 						<div class="sidebar-alert-card">
@@ -952,7 +983,6 @@
 	.bg-white { background-color: #fff; }
 	.text-white { color: #fff; }
 	.text-accent { color: hsl(var(--accent)); }
-	.mt-4 { margin-top: 1.5rem; }
 	
 	/* Main Header */
 	.main-header {
@@ -1647,7 +1677,16 @@
 		gap: 2rem;
 	}
 	.booking-header {
-		margin-bottom: 2rem;
+		margin-bottom: 1.25rem;
+	}
+	.booking-eyebrow, .sidebar-eyebrow {
+		display: inline-block;
+		margin-bottom: 0.5rem;
+		color: hsl(var(--primary));
+		font-size: 0.7rem;
+		font-weight: 800;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
 	}
 	.icon-title {
 		display: flex;
@@ -1664,6 +1703,33 @@
 		font-size: 0.9rem;
 		color: hsl(var(--muted-foreground));
 	}
+	.booking-steps {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 0.5rem;
+		list-style: none;
+		margin: 0 0 1.5rem;
+		padding: 0;
+	}
+	.booking-steps li {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		color: hsl(var(--muted-foreground));
+		font-size: 0.72rem;
+		font-weight: 700;
+	}
+	.booking-steps span {
+		display: grid;
+		width: 1.35rem;
+		height: 1.35rem;
+		place-items: center;
+		border-radius: 50%;
+		background: hsl(var(--muted));
+		font-size: 0.68rem;
+	}
+	.booking-steps .is-current { color: hsl(var(--primary)); }
+	.booking-steps .is-current span { background: hsl(var(--primary)); color: white; }
 	.patient-type-selector {
 		display: flex;
 		background-color: hsl(var(--muted));
@@ -1731,16 +1797,38 @@
 	.actual-booking-form {
 		display: flex;
 		flex-direction: column;
-		gap: 1.25rem;
+		gap: 1rem;
 	}
-	.form-section-title {
-		font-size: 0.9rem;
+	.booking-form-card {
+		padding: 1.25rem;
+		border: 1px solid hsl(var(--border) / 0.8);
+		border-radius: var(--radius-md);
+		background: linear-gradient(135deg, hsl(var(--secondary) / 0.45), white 45%);
+	}
+	.booking-form-card > * + * { margin-top: 1rem; }
+	.form-section-heading {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.7rem;
+	}
+	.form-section-icon {
+		display: grid;
+		width: 2rem;
+		height: 2rem;
+		place-items: center;
+		flex: 0 0 auto;
+		border-radius: var(--radius-sm);
+		background: hsl(var(--primary-light));
+		color: hsl(var(--primary));
+	}
+	.form-section-heading h3 {
+		font-size: 0.95rem;
 		font-weight: 800;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
+	}
+	.form-section-heading p {
+		margin-top: 0.1rem;
 		color: hsl(var(--muted-foreground));
-		border-bottom: 1.5px solid hsl(var(--border));
-		padding-bottom: 0.35rem;
+		font-size: 0.75rem;
 	}
 	.form-grid-2 {
 		display: grid;
@@ -1774,6 +1862,16 @@
 		outline: none;
 		box-shadow: 0 0 0 3px hsl(var(--primary-light));
 	}
+	.selection-hint {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		margin-top: 0.45rem;
+		color: hsl(var(--success));
+		font-size: 0.72rem;
+		font-weight: 700;
+	}
+	.booking-submit { margin-top: 0.35rem; }
 	
 	/* Booking Sidebar */
 	.booking-info-sidebar h3 {
@@ -1781,6 +1879,46 @@
 		font-weight: 800;
 		border-bottom: 1.5px solid hsl(var(--border));
 		padding-bottom: 0.5rem;
+	}
+	.booking-guide {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+	.booking-guide > div {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.7rem;
+	}
+	.booking-guide span {
+		display: grid;
+		width: 1.5rem;
+		height: 1.5rem;
+		place-items: center;
+		flex: 0 0 auto;
+		border-radius: 50%;
+		background: hsl(var(--primary));
+		color: white;
+		font-size: 0.7rem;
+		font-weight: 800;
+	}
+	.booking-guide p {
+		color: hsl(var(--muted-foreground));
+		font-size: 0.75rem;
+		line-height: 1.45;
+	}
+	.booking-guide strong {
+		display: block;
+		color: hsl(var(--foreground));
+		font-size: 0.8rem;
+	}
+	.sidebar-schedule-wrap h4 {
+		margin-bottom: 0.75rem;
+		font-size: 0.8rem;
+		font-weight: 800;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: hsl(var(--muted-foreground));
 	}
 	.sidebar-schedule-list {
 		display: flex;
@@ -2258,6 +2396,9 @@
 		.form-grid-2, .form-grid-3 {
 			grid-template-columns: 1fr;
 		}
+		.booking-steps { gap: 0.25rem; }
+		.booking-steps li { font-size: 0.65rem; }
+		.booking-form-card { padding: 1rem; }
 		.nav-menu {
 			display: none; /* Mobile menu collapsed for simplicity, accessible via CTAs */
 		}

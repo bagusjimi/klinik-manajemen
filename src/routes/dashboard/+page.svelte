@@ -26,6 +26,10 @@
 		UserPlus
 	} from 'lucide-svelte';
 
+	// Loading & Error state for async operations
+	let isLoading = $state(false);
+	let errorMessage = $state('');
+
 	// Svelte 5 reactive state for active tab
 	let activeTab = $state('overview'); // overview, patients, doctors, appointments, records, billing
 
@@ -76,6 +80,19 @@
 	let docSchedule = $state('');
 	let docStatus = $state<'Active' | 'Inactive'>('Active');
 	let docAvatar = $state('👨‍⚕️');
+
+	// Local taxRate for two-way binding (synced with store via async update)
+	let localTaxRate = $state(clinicStore.taxRate);
+
+	async function handleTaxRateChange(newValue: number) {
+		localTaxRate = newValue;
+		try {
+			await clinicStore.updateTaxRate(newValue);
+		} catch (err: any) {
+			localTaxRate = clinicStore.taxRate; // revert on error
+			alert(err?.message || 'Gagal memperbarui tarif pajak.');
+		}
+	}
 
 	// Computed Metrics for Dashboard Overview
 	const totalPatientsCount = $derived(clinicStore.patients.length);
@@ -178,36 +195,45 @@
 		showPatientModal = true;
 	}
 
-	function savePatient(e: Event) {
+	async function savePatient(e: Event) {
 		e.preventDefault();
 		if (!patName || !patNik || !patDob || !patPhone) {
 			alert('Harap isi semua kolom wajib!');
 			return;
 		}
 
-		if (editingPatient) {
-			clinicStore.updatePatient({
-				...editingPatient,
-				name: patName,
-				nik: patNik,
-				dob: patDob,
-				gender: patGender,
-				phone: patPhone,
-				address: patAddress,
-				allergies: patAllergies
-			});
-		} else {
-			clinicStore.addPatient({
-				name: patName,
-				nik: patNik,
-				dob: patDob,
-				gender: patGender,
-				phone: patPhone,
-				address: patAddress,
-				allergies: patAllergies || 'Tidak Ada'
-			});
+		isLoading = true;
+		errorMessage = '';
+		try {
+			if (editingPatient) {
+				await clinicStore.updatePatient({
+					...editingPatient,
+					name: patName,
+					nik: patNik,
+					dob: patDob,
+					gender: patGender,
+					phone: patPhone,
+					address: patAddress,
+					allergies: patAllergies
+				});
+			} else {
+				await clinicStore.addPatient({
+					name: patName,
+					nik: patNik,
+					dob: patDob,
+					gender: patGender,
+					phone: patPhone,
+					address: patAddress,
+					allergies: patAllergies || 'Tidak Ada'
+				});
+			}
+			showPatientModal = false;
+		} catch (err: any) {
+			errorMessage = err?.message || 'Gagal menyimpan data pasien.';
+			alert(errorMessage);
+		} finally {
+			isLoading = false;
 		}
-		showPatientModal = false;
 	}
 
 	// Doctor Actions
@@ -233,34 +259,43 @@
 		showDoctorModal = true;
 	}
 
-	function saveDoctor(e: Event) {
+	async function saveDoctor(e: Event) {
 		e.preventDefault();
 		if (!docName || !docSpecialty || !docSchedule || !docPhone) {
 			alert('Harap isi semua kolom wajib!');
 			return;
 		}
 
-		if (editingDoctor) {
-			clinicStore.updateDoctor({
-				...editingDoctor,
-				name: docName,
-				specialty: docSpecialty,
-				phone: docPhone,
-				schedule: docSchedule,
-				status: docStatus,
-				avatar: docAvatar
-			});
-		} else {
-			clinicStore.addDoctor({
-				name: docName,
-				specialty: docSpecialty,
-				phone: docPhone,
-				schedule: docSchedule,
-				status: docStatus,
-				avatar: docAvatar
-			});
+		isLoading = true;
+		errorMessage = '';
+		try {
+			if (editingDoctor) {
+				await clinicStore.updateDoctor({
+					...editingDoctor,
+					name: docName,
+					specialty: docSpecialty,
+					phone: docPhone,
+					schedule: docSchedule,
+					status: docStatus,
+					avatar: docAvatar
+				});
+			} else {
+				await clinicStore.addDoctor({
+					name: docName,
+					specialty: docSpecialty,
+					phone: docPhone,
+					schedule: docSchedule,
+					status: docStatus,
+					avatar: docAvatar
+				});
+			}
+			showDoctorModal = false;
+		} catch (err: any) {
+			errorMessage = err?.message || 'Gagal menyimpan data dokter.';
+			alert(errorMessage);
+		} finally {
+			isLoading = false;
 		}
-		showDoctorModal = false;
 	}
 
 	// Offline Registration Modal Toggle & Form inputs
@@ -304,62 +339,71 @@
 		showOfflineRegisterModal = true;
 	}
 
-	function saveOfflineRegistration(e: Event) {
+	async function saveOfflineRegistration(e: Event) {
 		e.preventDefault();
 		if (!offlineSelectedDoctorId || !offlineSelectedTimeSlot) {
 			alert('Harap pilih dokter dan slot waktu!');
 			return;
 		}
 
-		let patient: Patient;
+		isLoading = true;
+		errorMessage = '';
+		try {
+			let patient: Patient;
 
-		if (offlinePatientType === 'new') {
-			if (!offlineNewPatName || !offlineNewPatNik || !offlineNewPatPhone) {
-				alert('Harap lengkapi data wajib pasien baru offline (Nama, NIK, No. Telp)!');
-				return;
+			if (offlinePatientType === 'new') {
+				if (!offlineNewPatName || !offlineNewPatNik || !offlineNewPatPhone) {
+					alert('Harap lengkapi data wajib pasien baru offline (Nama, NIK, No. Telp)!');
+					return;
+				}
+				patient = await clinicStore.addPatient({
+					name: offlineNewPatName,
+					nik: offlineNewPatNik,
+					dob: offlineNewPatDob || new Date().toISOString().split('T')[0],
+					gender: offlineNewPatGender,
+					phone: offlineNewPatPhone,
+					address: offlineNewPatAddress || 'Registrasi Offline (Langsung)',
+					allergies: offlineNewPatAllergies || 'Tidak Ada'
+				});
+			} else {
+				if (!offlineSelectedPatientId) {
+					alert('Harap pilih pasien terdaftar!');
+					return;
+				}
+				const found = clinicStore.patients.find(p => p.id === offlineSelectedPatientId);
+				if (!found) {
+					alert('Pasien tidak ditemukan!');
+					return;
+				}
+				patient = found;
 			}
-			patient = clinicStore.addPatient({
-				name: offlineNewPatName,
-				nik: offlineNewPatNik,
-				dob: offlineNewPatDob || new Date().toISOString().split('T')[0],
-				gender: offlineNewPatGender,
-				phone: offlineNewPatPhone,
-				address: offlineNewPatAddress || 'Registrasi Offline (Langsung)',
-				allergies: offlineNewPatAllergies || 'Tidak Ada'
+
+			// Create Appointment
+			const doc = clinicStore.doctors.find(d => d.id === offlineSelectedDoctorId);
+			const todayDate = new Date().toISOString().split('T')[0];
+
+			const newApt = await clinicStore.addAppointment({
+				patientId: patient.id,
+				patientName: patient.name,
+				patientPhone: patient.phone,
+				doctorId: offlineSelectedDoctorId,
+				doctorName: doc ? doc.name : 'Dokter Medika',
+				date: todayDate,
+				timeSlot: offlineSelectedTimeSlot,
+				symptoms: offlineSymptoms || 'Registrasi Offline (Pemeriksaan Umum)'
 			});
-		} else {
-			if (!offlineSelectedPatientId) {
-				alert('Harap pilih pasien terdaftar!');
-				return;
-			}
-			const found = clinicStore.patients.find(p => p.id === offlineSelectedPatientId);
-			if (!found) {
-				alert('Pasien tidak ditemukan!');
-				return;
-			}
-			patient = found;
+
+			// Confirm offline registrations immediately
+			await clinicStore.updateAppointmentStatus(newApt.id, 'Confirmed');
+
+			showOfflineRegisterModal = false;
+			alert(`Pendaftaran offline pasien ${patient.name} berhasil!\n\nNOMOR ANTREAN: ${newApt.queueNumber}\n\nAntrean langsung Dikonfirmasi dan masuk jadwal dokter hari ini.`);
+		} catch (err: any) {
+			errorMessage = err?.message || 'Gagal mendaftarkan pasien offline.';
+			alert(errorMessage);
+		} finally {
+			isLoading = false;
 		}
-
-		// Create Appointment
-		const doc = clinicStore.doctors.find(d => d.id === offlineSelectedDoctorId);
-		const todayDate = new Date().toISOString().split('T')[0];
-
-		const newApt = clinicStore.addAppointment({
-			patientId: patient.id,
-			patientName: patient.name,
-			patientPhone: patient.phone,
-			doctorId: offlineSelectedDoctorId,
-			doctorName: doc ? doc.name : 'Dokter Medika',
-			date: todayDate,
-			timeSlot: offlineSelectedTimeSlot,
-			symptoms: offlineSymptoms || 'Registrasi Offline (Pemeriksaan Umum)'
-		});
-
-		// Confirm offline registrations immediately
-		clinicStore.updateAppointmentStatus(newApt.id, 'Confirmed');
-
-		showOfflineRegisterModal = false;
-		alert(`Pendaftaran offline pasien ${patient.name} berhasil!\n\nNOMOR ANTREAN: ${newApt.queueNumber}\n\nAntrean langsung Dikonfirmasi dan masuk jadwal dokter hari ini.`);
 	}
 
 	// Advanced Combined Complete & Diagnose Appointment Workflow
@@ -386,46 +430,55 @@
 		invoiceItems = invoiceItems.filter((_, i) => i !== index);
 	}
 
-	function saveDiagnosisAndBill() {
+	async function saveDiagnosisAndBill() {
 		if (!activeDiagnoseApt) return;
 		if (!diagnosisText || !prescriptionText) {
 			alert('Mohon isi Diagnosis dan Resep Obat!');
 			return;
 		}
 
-		const todayDate = new Date().toISOString().split('T')[0];
+		isLoading = true;
+		errorMessage = '';
+		try {
+			const todayDate = new Date().toISOString().split('T')[0];
 
-		// 1. Create Medical Record
-		clinicStore.addMedicalRecord({
-			patientId: activeDiagnoseApt.patientId,
-			patientName: activeDiagnoseApt.patientName,
-			doctorId: activeDiagnoseApt.doctorId,
-			doctorName: activeDiagnoseApt.doctorName,
-			date: todayDate,
-			diagnosis: diagnosisText,
-			symptoms: activeDiagnoseApt.symptoms,
-			prescription: prescriptionText,
-			treatment: treatmentText,
-			notes: 'Selesai periksa via antrean online.'
-		});
+			// 1. Create Medical Record
+			await clinicStore.addMedicalRecord({
+				patientId: activeDiagnoseApt.patientId,
+				patientName: activeDiagnoseApt.patientName,
+				doctorId: activeDiagnoseApt.doctorId,
+				doctorName: activeDiagnoseApt.doctorName,
+				date: todayDate,
+				diagnosis: diagnosisText,
+				symptoms: activeDiagnoseApt.symptoms,
+				prescription: prescriptionText,
+				treatment: treatmentText,
+				notes: 'Selesai periksa via antrean online.'
+			});
 
-		// 2. Create Invoice
-		clinicStore.addInvoice({
-			appointmentId: activeDiagnoseApt.id,
-			patientId: activeDiagnoseApt.patientId,
-			patientName: activeDiagnoseApt.patientName,
-			date: todayDate,
-			items: invoiceItems,
-			status: 'Unpaid'
-		});
+			// 2. Create Invoice
+			await clinicStore.addInvoice({
+				appointmentId: activeDiagnoseApt.id,
+				patientId: activeDiagnoseApt.patientId,
+				patientName: activeDiagnoseApt.patientName,
+				date: todayDate,
+				items: invoiceItems,
+				status: 'Unpaid'
+			});
 
-		// 3. Mark appointment as completed
-		clinicStore.updateAppointmentStatus(activeDiagnoseApt.id, 'Completed');
+			// 3. Mark appointment as completed
+			await clinicStore.updateAppointmentStatus(activeDiagnoseApt.id, 'Completed');
 
-		showDiagnoseModal = false;
-		activeDiagnoseApt = null;
-		alert('Pemeriksaan berhasil diselesaikan! Rekam medis dan tagihan baru telah dibuat.');
-		activeTab = 'billing'; // Jump to cashier to see invoice!
+			showDiagnoseModal = false;
+			activeDiagnoseApt = null;
+			alert('Pemeriksaan berhasil diselesaikan! Rekam medis dan tagihan baru telah dibuat.');
+			activeTab = 'billing'; // Jump to cashier to see invoice!
+		} catch (err: any) {
+			errorMessage = err?.message || 'Gagal menyelesaikan pemeriksaan.';
+			alert(errorMessage);
+		} finally {
+			isLoading = false;
+		}
 	}
 
 	function printInvoice() {
@@ -682,10 +735,10 @@
 											</div>
 											<div class="agenda-actions">
 												{#if apt.status === 'Pending'}
-													<button 
-														class="action-icon-btn approve" 
+													<button
+														class="action-icon-btn approve"
 														title="Setujui Janji Temu"
-														onclick={() => clinicStore.updateAppointmentStatus(apt.id, 'Confirmed')}
+														onclick={async () => await clinicStore.updateAppointmentStatus(apt.id, 'Confirmed')}
 													>
 														<Check size={16} />
 													</button>
@@ -764,9 +817,9 @@
 													<button class="action-icon-btn edit" onclick={() => openEditPatient(patient)}>
 														<Edit size={14} />
 													</button>
-													<button class="action-icon-btn delete" onclick={() => {
+													<button class="action-icon-btn delete" onclick={async () => {
 														if(confirm(`Hapus pasien ${patient.name}?`)) {
-															clinicStore.deletePatient(patient.id);
+															await clinicStore.deletePatient(patient.id);
 														}
 													}}>
 														<Trash2 size={14} />
@@ -826,11 +879,11 @@
 									</div>
 
 									<div class="doc-admin-footer">
-										<button 
+										<button
 											class="status-toggle-btn {doctor.status === 'Active' ? 'btn-active-status' : 'btn-inactive-status'}"
-											onclick={() => {
+											onclick={async () => {
 												doctor.status = doctor.status === 'Active' ? 'Inactive' : 'Active';
-												clinicStore.updateDoctor(doctor);
+												await clinicStore.updateDoctor(doctor);
 											}}
 										>
 											{doctor.status === 'Active' ? '🔴 Non-aktifkan' : '🟢 Aktifkan'}
@@ -839,9 +892,9 @@
 											<button class="action-icon-btn edit" onclick={() => openEditDoctor(doctor)}>
 												<Edit size={14} />
 											</button>
-											<button class="action-icon-btn delete" onclick={() => {
+											<button class="action-icon-btn delete" onclick={async () => {
 												if(confirm(`Hapus dokter ${doctor.name}?`)) {
-													clinicStore.deleteDoctor(doctor.id);
+													await clinicStore.deleteDoctor(doctor.id);
 												}
 											}}>
 												<Trash2 size={14} />
@@ -945,9 +998,9 @@
 														<td>
 															<div class="appointment-actions-cell">
 																{#if apt.status === 'Pending'}
-																	<button 
+																	<button
 																		class="btn btn-outline btn-sm py-1 px-2"
-																		onclick={() => clinicStore.updateAppointmentStatus(apt.id, 'Confirmed')}
+																		onclick={async () => await clinicStore.updateAppointmentStatus(apt.id, 'Confirmed')}
 																	>
 																		<Check size={12} /> Setujui
 																	</button>
@@ -963,11 +1016,11 @@
 																{/if}
 
 																{#if apt.status === 'Pending' || apt.status === 'Confirmed'}
-																	<button 
+																	<button
 																		class="btn-text-danger text-danger btn-sm"
-																		onclick={() => {
+																		onclick={async () => {
 																			if(confirm(`Batalkan janji temu ${apt.id}?`)) {
-																				clinicStore.updateAppointmentStatus(apt.id, 'Cancelled');
+																				await clinicStore.updateAppointmentStatus(apt.id, 'Cancelled');
 																			}
 																		}}
 																	>
@@ -1062,12 +1115,12 @@
 						</div>
 						<div style="display: flex; align-items: center; gap: 0.5rem; background-color: hsl(var(--muted) / 0.5); padding: 0.35rem 0.75rem; border-radius: var(--radius-md); border: 1.5px solid hsl(var(--border));">
 							<input 
-								type="number" 
-								min="0" 
-								max="100" 
+								type="number"
+								min="0"
+								max="100"
 								style="width: 60px; border: none; background: transparent; font-weight: 800; text-align: right; font-size: 0.95rem; outline: none; padding: 0;"
-								bind:value={clinicStore.taxRate}
-								oninput={() => clinicStore.updateTaxRate()} 
+								value={localTaxRate}
+								onchange={(e) => handleTaxRateChange(Number((e.target as HTMLInputElement).value))}
 							/>
 							<span style="font-weight: 800; font-size: 0.95rem; color: hsl(var(--muted-foreground));">% PPN</span>
 						</div>
@@ -1141,11 +1194,11 @@
 											<td>
 												<div class="billing-actions-cell">
 													{#if inv.status === 'Unpaid'}
-														<button 
+														<button
 															class="btn btn-outline btn-sm py-1 px-2"
-															onclick={() => {
+															onclick={async () => {
 																if(confirm(`Konfirmasi pembayaran tagihan ${inv.id}?`)) {
-																	clinicStore.updateInvoiceStatus(inv.id, 'Paid');
+																	await clinicStore.updateInvoiceStatus(inv.id, 'Paid');
 																}
 															}}
 														>

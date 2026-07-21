@@ -49,7 +49,10 @@ CREATE INDEX IF NOT EXISTS idx_doctors_status ON doctors(status);
 CREATE TABLE IF NOT EXISTS appointments (
 	id TEXT PRIMARY KEY,
 	patient_id TEXT NOT NULL REFERENCES patients(id),
+	patient_name TEXT NOT NULL DEFAULT '',
+	patient_phone TEXT NOT NULL DEFAULT '',
 	doctor_id TEXT NOT NULL REFERENCES doctors(id),
+	doctor_name TEXT NOT NULL DEFAULT '',
 	date TEXT NOT NULL,
 	time_slot TEXT NOT NULL,
 	symptoms TEXT NOT NULL DEFAULT '',
@@ -69,7 +72,9 @@ CREATE INDEX IF NOT EXISTS idx_appointments_status ON appointments(status);
 CREATE TABLE IF NOT EXISTS medical_records (
 	id TEXT PRIMARY KEY,
 	patient_id TEXT NOT NULL REFERENCES patients(id),
+	patient_name TEXT NOT NULL DEFAULT '',
 	doctor_id TEXT NOT NULL REFERENCES doctors(id),
+	doctor_name TEXT NOT NULL DEFAULT '',
 	date TEXT NOT NULL,
 	diagnosis TEXT NOT NULL DEFAULT '',
 	symptoms TEXT NOT NULL DEFAULT '',
@@ -89,6 +94,7 @@ CREATE TABLE IF NOT EXISTS invoices (
 	id TEXT PRIMARY KEY,
 	appointment_id TEXT NOT NULL REFERENCES appointments(id),
 	patient_id TEXT NOT NULL REFERENCES patients(id),
+	patient_name TEXT NOT NULL DEFAULT '',
 	date TEXT NOT NULL,
 	subtotal INTEGER NOT NULL DEFAULT 0,
 	tax INTEGER NOT NULL DEFAULT 0,

@@ -69,209 +69,79 @@ export interface Invoice {
 	status: 'Paid' | 'Unpaid';
 }
 
-const defaultPatients: Patient[] = [
-	{
-		id: 'PAT-001',
-		name: 'Budi Santoso',
-		nik: '3171012345670001',
-		dob: '1985-05-12',
-		gender: 'Laki-laki',
-		phone: '08123456789',
-		address: 'Jl. Merdeka No. 10, Jakarta Pusat',
-		allergies: 'Alergi Penicillin',
-		registeredAt: '2026-01-15'
-	},
-	{
-		id: 'PAT-002',
-		name: 'Siti Aminah',
-		nik: '3273012345670002',
-		dob: '1990-09-23',
-		gender: 'Perempuan',
-		phone: '08234567890',
-		address: 'Jl. Dago No. 45, Bandung',
-		allergies: 'Tidak Ada',
-		registeredAt: '2026-02-20'
-	},
-	{
-		id: 'PAT-003',
-		name: 'Ahmad Fauzi',
-		nik: '3578012345670003',
-		dob: '1978-01-15',
-		gender: 'Laki-laki',
-		phone: '08345678901',
-		address: 'Jl. Raya Darmo No. 12, Surabaya',
-		allergies: 'Alergi Seafood',
-		registeredAt: '2026-03-05'
-	},
-	{
-		id: 'PAT-004',
-		name: 'Dewi Lestari',
-		nik: '3471012345670004',
-		dob: '1995-11-04',
-		gender: 'Perempuan',
-		phone: '08456789012',
-		address: 'Jl. Malioboro No. 8, Yogyakarta',
-		allergies: 'Alergi Debu',
-		registeredAt: '2026-04-12'
-	},
-	{
-		id: 'PAT-005',
-		name: 'Rian Hidayat',
-		nik: '1271012345670005',
-		dob: '2002-07-30',
-		gender: 'Laki-laki',
-		phone: '08567890123',
-		address: 'Jl. Setia Budi No. 15, Medan',
-		allergies: 'Tidak Ada',
-		registeredAt: '2026-05-01'
-	}
-];
+function mapPatient(row: any): Patient {
+	return {
+		id: row.id,
+		name: row.name,
+		nik: row.nik,
+		dob: row.dob,
+		gender: row.gender,
+		phone: row.phone,
+		address: row.address,
+		allergies: row.allergies,
+		registeredAt: row.registered_at ?? row.registeredAt
+	};
+}
 
-const defaultDoctors: Doctor[] = [
-	{
-		id: 'DOC-001',
-		name: 'dr. Adrian Sp.PD',
-		specialty: 'Spesialis Penyakit Dalam',
-		phone: '08112233445',
-		schedule: 'Senin - Rabu (08:00 - 12:00)',
-		status: 'Active',
-		avatar: '👨‍⚕️'
-	},
-	{
-		id: 'DOC-002',
-		name: 'dr. Sarah Sp.A',
-		specialty: 'Spesialis Anak',
-		phone: '08112233446',
-		schedule: 'Kamis - Sabtu (09:00 - 13:00)',
-		status: 'Active',
-		avatar: '👩‍⚕️'
-	},
-	{
-		id: 'DOC-003',
-		name: 'dr. Handoko Sp.JP',
-		specialty: 'Spesialis Jantung & Pembuluh Darah',
-		phone: '08112233447',
-		schedule: 'Selasa & Jumat (14:00 - 18:00)',
-		status: 'Active',
-		avatar: '👨‍⚕️'
-	},
-	{
-		id: 'DOC-004',
-		name: 'dr. Linda Sp.OG',
-		specialty: 'Spesialis Kebidanan & Kandungan',
-		phone: '08112233448',
-		schedule: 'Senin & Kamis (13:00 - 17:00)',
-		status: 'Active',
-		avatar: '👩‍⚕️'
-	},
-	{
-		id: 'DOC-005',
-		name: 'drg. Rian Pratama',
-		specialty: 'Dokter Gigi',
-		phone: '08112233449',
-		schedule: 'Rabu & Sabtu (10:00 - 15:00)',
-		status: 'Active',
-		avatar: '👨‍⚕️'
-	}
-];
+function mapDoctor(row: any): Doctor {
+	return {
+		id: row.id,
+		name: row.name,
+		specialty: row.specialty,
+		phone: row.phone,
+		schedule: row.schedule,
+		status: row.status,
+		avatar: row.avatar
+	};
+}
 
-const todayStr = new Date().toISOString().split('T')[0];
-const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+function mapAppointment(row: any): Appointment {
+	return {
+		id: row.id,
+		patientId: row.patient_id ?? row.patientId,
+		patientName: row.patient_name ?? row.patientName ?? '',
+		patientPhone: row.patient_phone ?? row.patientPhone ?? '',
+		doctorId: row.doctor_id ?? row.doctorId,
+		doctorName: row.doctor_name ?? row.doctorName ?? '',
+		date: row.date,
+		timeSlot: row.time_slot ?? row.timeSlot ?? '',
+		symptoms: row.symptoms,
+		status: row.status,
+		createdAt: row.created_at ?? row.createdAt ?? '',
+		queueNumber: row.queue_number ?? row.queueNumber
+	};
+}
 
-const defaultAppointments: Appointment[] = [
-	{
-		id: 'APT-001',
-		patientId: 'PAT-001',
-		patientName: 'Budi Santoso',
-		patientPhone: '08123456789',
-		doctorId: 'DOC-001',
-		doctorName: 'dr. Adrian Sp.PD',
-		date: todayStr,
-		timeSlot: '09:00 - 09:30',
-		symptoms: 'Demam tinggi dan flu selama 3 hari terakhir, disertai pusing kepala.',
-		status: 'Confirmed',
-		createdAt: yesterdayStr,
-		queueNumber: 'P-001'
-	},
-	{
-		id: 'APT-002',
-		patientId: 'PAT-002',
-		patientName: 'Siti Aminah',
-		patientPhone: '08234567890',
-		doctorId: 'DOC-002',
-		doctorName: 'dr. Sarah Sp.A',
-		date: todayStr,
-		timeSlot: '10:00 - 10:30',
-		symptoms: 'Imunisasi rutin balita usia 18 bulan dan cek tumbuh kembang anak.',
-		status: 'Pending',
-		createdAt: yesterdayStr,
-		queueNumber: 'A-001'
-	},
-	{
-		id: 'APT-003',
-		patientId: 'PAT-003',
-		patientName: 'Ahmad Fauzi',
-		patientPhone: '08345678901',
-		doctorId: 'DOC-003',
-		doctorName: 'dr. Handoko Sp.JP',
-		date: yesterdayStr,
-		timeSlot: '15:00 - 15:30',
-		symptoms: 'Nyeri dada ringan terutama saat beraktivitas berat.',
-		status: 'Completed',
-		createdAt: yesterdayStr,
-		queueNumber: 'J-001'
-	},
-	{
-		id: 'APT-004',
-		patientId: 'PAT-004',
-		patientName: 'Dewi Lestari',
-		patientPhone: '08456789012',
-		doctorId: 'DOC-004',
-		doctorName: 'dr. Linda Sp.OG',
-		date: tomorrowStr,
-		timeSlot: '14:00 - 14:30',
-		symptoms: 'Kontrol rutin kehamilan trimester pertama.',
-		status: 'Confirmed',
-		createdAt: todayStr,
-		queueNumber: 'K-001'
-	}
-];
+function mapMedicalRecord(row: any): MedicalRecord {
+	return {
+		id: row.id,
+		patientId: row.patient_id ?? row.patientId,
+		patientName: row.patient_name ?? row.patientName ?? '',
+		doctorId: row.doctor_id ?? row.doctorId,
+		doctorName: row.doctor_name ?? row.doctorName ?? '',
+		date: row.date,
+		diagnosis: row.diagnosis,
+		symptoms: row.symptoms,
+		prescription: row.prescription,
+		treatment: row.treatment,
+		notes: row.notes
+	};
+}
 
-const defaultMedicalRecords: MedicalRecord[] = [
-	{
-		id: 'REC-001',
-		patientId: 'PAT-003',
-		patientName: 'Ahmad Fauzi',
-		doctorId: 'DOC-003',
-		doctorName: 'dr. Handoko Sp.JP',
-		date: yesterdayStr,
-		diagnosis: 'Angina Pectoris Stabil Ringan',
-		symptoms: 'Nyeri dada menjalar ke bahu kiri saat kelelahan, reda dengan istirahat.',
-		prescription: 'Amlodipine 5mg 1x1 tab (pagi), Aspilet 80mg 1x1 tab (setelah makan), Isosorbide Dinitrate 5mg (bila perlu sublingual)',
-		treatment: 'Pemeriksaan penunjang EKG, edukasi diet rendah kolesterol, hindari aktivitas fisik berlebihan sementara.',
-		notes: 'Pasien kooperatif. Dijadwalkan kontrol ulang 2 minggu lagi.'
-	}
-];
-
-const defaultInvoices: Invoice[] = [
-	{
-		id: 'INV-20260517-001',
-		appointmentId: 'APT-003',
-		patientId: 'PAT-003',
-		patientName: 'Ahmad Fauzi',
-		date: yesterdayStr,
-		items: [
-			{ name: 'Jasa Konsultasi Dokter Spesialis Jantung', price: 200000 },
-			{ name: 'Pemeriksaan EKG (Elektrokardiogram)', price: 150000 },
-			{ name: 'Paket Obat Jantung & Pengencer Darah', price: 120000 }
-		],
-		subtotal: 470000,
-		tax: 47000,
-		total: 517000,
-		status: 'Paid'
-	}
-];
+function mapInvoice(row: any): Invoice {
+	return {
+		id: row.id,
+		appointmentId: row.appointment_id ?? row.appointmentId,
+		patientId: row.patient_id ?? row.patientId,
+		patientName: row.patient_name ?? row.patientName ?? '',
+		date: row.date,
+		items: row.items?.map((i: any) => ({ name: i.name, price: i.price })) ?? [],
+		subtotal: row.subtotal,
+		tax: row.tax,
+		total: row.total,
+		status: row.status
+	};
+}
 
 class ClinicStore {
 	patients = $state<Patient[]>([]);
@@ -279,206 +149,207 @@ class ClinicStore {
 	appointments = $state<Appointment[]>([]);
 	medicalRecords = $state<MedicalRecord[]>([]);
 	invoices = $state<Invoice[]>([]);
-	taxRate = $state<number>(10); // Dynamic tax rate in percentage (defaults to 10%)
+	taxRate = $state<number>(10);
+	loading = $state<boolean>(false);
+	error = $state<string | null>(null);
 
 	constructor() {
-		this.loadData();
+		if (browser) this.loadAll();
 	}
 
-	private loadData() {
-		if (!browser) return;
-
+	async loadAll() {
+		this.loading = true;
+		this.error = null;
 		try {
-			const patientsData = localStorage.getItem('medika_patients');
-			this.patients = patientsData ? JSON.parse(patientsData) : defaultPatients;
-
-			const doctorsData = localStorage.getItem('medika_doctors');
-			this.doctors = doctorsData ? JSON.parse(doctorsData) : defaultDoctors;
-
-			const appointmentsData = localStorage.getItem('medika_appointments');
-			this.appointments = appointmentsData ? JSON.parse(appointmentsData) : defaultAppointments;
-
-			const medicalRecordsData = localStorage.getItem('medika_medical_records');
-			this.medicalRecords = medicalRecordsData ? JSON.parse(medicalRecordsData) : defaultMedicalRecords;
-
-			const invoicesData = localStorage.getItem('medika_invoices');
-			this.invoices = invoicesData ? JSON.parse(invoicesData) : defaultInvoices;
-
-			const taxRateData = localStorage.getItem('medika_tax_rate');
-			this.taxRate = taxRateData ? JSON.parse(taxRateData) : 10;
-		} catch (error) {
-			console.error('Failed to load clinic data from localStorage:', error);
-			this.patients = defaultPatients;
-			this.doctors = defaultDoctors;
-			this.appointments = defaultAppointments;
-			this.medicalRecords = defaultMedicalRecords;
-			this.invoices = defaultInvoices;
+			await Promise.all([
+				this.fetchPatients(),
+				this.fetchDoctors(),
+				this.fetchAppointments(),
+				this.fetchMedicalRecords(),
+				this.fetchInvoices(),
+				this.fetchTaxRate()
+			]);
+		} catch (e: any) {
+			this.error = e.message;
+		} finally {
+			this.loading = false;
 		}
 	}
 
-	private saveData(key: string, data: any) {
-		if (!browser) return;
-		try {
-			localStorage.setItem(key, JSON.stringify(data));
-		} catch (error) {
-			console.error(`Failed to save ${key} to localStorage:`, error);
+	private async api<T>(url: string, options?: RequestInit): Promise<T> {
+		const res = await fetch(url, {
+			...options,
+			headers: { 'Content-Type': 'application/json' }
+		});
+		if (!res.ok) {
+			const err = await res.json().catch(() => ({ error: res.statusText }));
+			throw new Error(err.error ?? res.statusText);
 		}
+		return res.json();
 	}
 
-	// Patients Actions
-	addPatient(patientData: Omit<Patient, 'id' | 'registeredAt'>): Patient {
-		const nextIdNum = this.patients.length > 0 
-			? Math.max(...this.patients.map(p => parseInt(p.id.split('-')[1]))) + 1 
-			: 1;
-		const id = `PAT-${String(nextIdNum).padStart(3, '0')}`;
-		const registeredAt = new Date().toISOString().split('T')[0];
-		
-		const newPatient: Patient = {
-			id,
-			registeredAt,
-			...patientData
-		};
+	// ---- Patients ----
+	async fetchPatients() {
+		const data = await this.api<any[]>('/api/patients');
+		this.patients = data.map(mapPatient);
+	}
 
+	async addPatient(patientData: Omit<Patient, 'id' | 'registeredAt'>): Promise<Patient> {
+		const data = await this.api<any>('/api/patients', {
+			method: 'POST',
+			body: JSON.stringify(patientData)
+		});
+		const newPatient = mapPatient(data);
 		this.patients = [newPatient, ...this.patients];
-		this.saveData('medika_patients', this.patients);
 		return newPatient;
 	}
 
-	updatePatient(updatedPatient: Patient) {
+	async updatePatient(updatedPatient: Patient) {
+		await this.api('/api/patients', {
+			method: 'PUT',
+			body: JSON.stringify(updatedPatient)
+		});
 		this.patients = this.patients.map(p => p.id === updatedPatient.id ? updatedPatient : p);
-		this.saveData('medika_patients', this.patients);
 	}
 
-	deletePatient(id: string) {
+	async deletePatient(id: string) {
+		await this.api(`/api/patients?id=${id}`, { method: 'DELETE' });
 		this.patients = this.patients.filter(p => p.id !== id);
-		this.saveData('medika_patients', this.patients);
 	}
 
-	// Doctors Actions
-	addDoctor(doctorData: Omit<Doctor, 'id'>): Doctor {
-		const nextIdNum = this.doctors.length > 0 
-			? Math.max(...this.doctors.map(d => parseInt(d.id.split('-')[1]))) + 1 
-			: 1;
-		const id = `DOC-${String(nextIdNum).padStart(3, '0')}`;
-		
-		const newDoctor: Doctor = {
-			id,
-			...doctorData
-		};
+	// ---- Doctors ----
+	async fetchDoctors() {
+		const data = await this.api<any[]>('/api/doctors');
+		this.doctors = data.map(mapDoctor);
+	}
 
+	async addDoctor(doctorData: Omit<Doctor, 'id'>): Promise<Doctor> {
+		const data = await this.api<any>('/api/doctors', {
+			method: 'POST',
+			body: JSON.stringify(doctorData)
+		});
+		const newDoctor = mapDoctor(data);
 		this.doctors = [...this.doctors, newDoctor];
-		this.saveData('medika_doctors', this.doctors);
 		return newDoctor;
 	}
 
-	updateDoctor(updatedDoctor: Doctor) {
+	async updateDoctor(updatedDoctor: Doctor) {
+		await this.api('/api/doctors', {
+			method: 'PUT',
+			body: JSON.stringify(updatedDoctor)
+		});
 		this.doctors = this.doctors.map(d => d.id === updatedDoctor.id ? updatedDoctor : d);
-		this.saveData('medika_doctors', this.doctors);
 	}
 
-	deleteDoctor(id: string) {
+	async deleteDoctor(id: string) {
+		await this.api(`/api/doctors?id=${id}`, { method: 'DELETE' });
 		this.doctors = this.doctors.filter(d => d.id !== id);
-		this.saveData('medika_doctors', this.doctors);
 	}
 
-	// Appointments Actions
-	addAppointment(aptData: Omit<Appointment, 'id' | 'createdAt' | 'status' | 'queueNumber'>): Appointment {
-		const nextIdNum = this.appointments.length > 0 
-			? Math.max(...this.appointments.map(a => parseInt(a.id.split('-')[1]))) + 1 
-			: 1;
-		const id = `APT-${String(nextIdNum).padStart(3, '0')}`;
-		const createdAt = new Date().toISOString().split('T')[0];
+	// ---- Appointments ----
+	async fetchAppointments() {
+		const data = await this.api<any[]>('/api/appointments');
+		this.appointments = data.map(mapAppointment);
+	}
 
-		// Generate Queue Number (Nomor Antrean Pintar)
-		const doctor = this.doctors.find(d => d.id === aptData.doctorId);
-		const prefix = doctor ? doctor.specialty.substring(0, 1).toUpperCase() : 'A';
-		const sameDayDoctorApts = this.appointments.filter(a => a.date === aptData.date && a.doctorId === aptData.doctorId);
-		const queueNumber = `${prefix}-${String(sameDayDoctorApts.length + 1).padStart(3, '0')}`;
-
-		const newAppointment: Appointment = {
-			id,
-			queueNumber,
-			createdAt,
-			status: 'Pending',
-			...aptData
+	async addAppointment(aptData: Omit<Appointment, 'id' | 'createdAt' | 'status' | 'queueNumber'>): Promise<Appointment> {
+		const payload = {
+			patient_id: aptData.patientId,
+			doctor_id: aptData.doctorId,
+			date: aptData.date,
+			time_slot: aptData.timeSlot,
+			symptoms: aptData.symptoms
 		};
-
-		this.appointments = [newAppointment, ...this.appointments];
-		this.saveData('medika_appointments', this.appointments);
-		return newAppointment;
+		const data = await this.api<any>('/api/appointments', {
+			method: 'POST',
+			body: JSON.stringify(payload)
+		});
+		const newApt = mapAppointment(data);
+		this.appointments = [newApt, ...this.appointments];
+		return newApt;
 	}
 
-	updateAppointmentStatus(id: string, status: Appointment['status']) {
+	async updateAppointmentStatus(id: string, status: Appointment['status']) {
+		await this.api('/api/appointments', {
+			method: 'PATCH',
+			body: JSON.stringify({ id, status })
+		});
 		this.appointments = this.appointments.map(a => a.id === id ? { ...a, status } : a);
-		this.saveData('medika_appointments', this.appointments);
 	}
 
-	deleteAppointment(id: string) {
+	async deleteAppointment(id: string) {
+		await this.api(`/api/appointments?id=${id}`, { method: 'DELETE' });
 		this.appointments = this.appointments.filter(a => a.id !== id);
-		this.saveData('medika_appointments', this.appointments);
 	}
 
-	// Medical Records Actions
-	addMedicalRecord(recordData: Omit<MedicalRecord, 'id'>): MedicalRecord {
-		const nextIdNum = this.medicalRecords.length > 0 
-			? Math.max(...this.medicalRecords.map(r => parseInt(r.id.split('-')[1]))) + 1 
-			: 1;
-		const id = `REC-${String(nextIdNum).padStart(3, '0')}`;
+	// ---- Medical Records ----
+	async fetchMedicalRecords() {
+		const data = await this.api<any[]>('/api/medical-records');
+		this.medicalRecords = data.map(mapMedicalRecord);
+	}
 
-		const newRecord: MedicalRecord = {
-			id,
-			...recordData
+	async addMedicalRecord(recordData: Omit<MedicalRecord, 'id'>): Promise<MedicalRecord> {
+		const payload = {
+			patient_id: recordData.patientId,
+			doctor_id: recordData.doctorId,
+			date: recordData.date,
+			diagnosis: recordData.diagnosis,
+			symptoms: recordData.symptoms,
+			prescription: recordData.prescription,
+			treatment: recordData.treatment,
+			notes: recordData.notes
 		};
-
+		const data = await this.api<any>('/api/medical-records', {
+			method: 'POST',
+			body: JSON.stringify(payload)
+		});
+		const newRecord = mapMedicalRecord(data);
 		this.medicalRecords = [newRecord, ...this.medicalRecords];
-		this.saveData('medika_medical_records', this.medicalRecords);
 		return newRecord;
 	}
 
-	// Invoices Actions
-	addInvoice(invoiceData: Omit<Invoice, 'id' | 'subtotal' | 'tax' | 'total'>): Invoice {
-		const dateCode = invoiceData.date.replace(/-/g, '');
-		const sameDayInvoices = this.invoices.filter(inv => inv.date === invoiceData.date);
-		const seq = String(sameDayInvoices.length + 1).padStart(3, '0');
-		const id = `INV-${dateCode}-${seq}`;
+	// ---- Invoices ----
+	async fetchInvoices() {
+		const data = await this.api<any[]>('/api/invoices');
+		this.invoices = data.map(mapInvoice);
+	}
 
-		const subtotal = invoiceData.items.reduce((sum, item) => sum + item.price, 0);
-		const tax = Math.round(subtotal * (this.taxRate / 100)); // Dynamic tax rate based on settings
-		const total = subtotal + tax;
-
-		const newInvoice: Invoice = {
-			id,
-			...invoiceData,
-			subtotal,
-			tax,
-			total
+	async addInvoice(invoiceData: Omit<Invoice, 'id' | 'subtotal' | 'tax' | 'total'>): Promise<Invoice> {
+		const payload = {
+			appointment_id: invoiceData.appointmentId,
+			patient_id: invoiceData.patientId,
+			date: invoiceData.date,
+			items: invoiceData.items
 		};
-
+		const data = await this.api<any>('/api/invoices', {
+			method: 'POST',
+			body: JSON.stringify(payload)
+		});
+		const newInvoice = mapInvoice(data);
 		this.invoices = [newInvoice, ...this.invoices];
-		this.saveData('medika_invoices', this.invoices);
 		return newInvoice;
 	}
 
-	updateInvoiceStatus(id: string, status: Invoice['status']) {
-		this.invoices = this.invoices.map(inv => {
-			if (inv.id === id) {
-				// Ketika ditandai lunas, bekukan pajak berdasarkan tarif aktif saat ini
-				const tax = inv.status === 'Unpaid' && status === 'Paid'
-					? Math.round(inv.subtotal * (this.taxRate / 100))
-					: inv.tax;
-				const total = inv.status === 'Unpaid' && status === 'Paid'
-					? inv.subtotal + tax
-					: inv.total;
-				return { ...inv, status, tax, total };
-			}
-			return inv;
+	async updateInvoiceStatus(id: string, status: Invoice['status']) {
+		await this.api('/api/invoices', {
+			method: 'PATCH',
+			body: JSON.stringify({ id, status })
 		});
-		this.saveData('medika_invoices', this.invoices);
+		this.invoices = this.invoices.map(inv => inv.id === id ? { ...inv, status } : inv);
 	}
 
-	updateTaxRate(rate?: number) {
+	// ---- Settings ----
+	async fetchTaxRate() {
+		const data = await this.api<any>('/api/settings?key=tax_rate');
+		this.taxRate = Number(data.value ?? 10);
+	}
+
+	async updateTaxRate(rate?: number) {
 		if (rate !== undefined) this.taxRate = rate;
-		this.saveData('medika_tax_rate', this.taxRate);
+		await this.api('/api/settings', {
+			method: 'PUT',
+			body: JSON.stringify({ key: 'tax_rate', value: rate ?? this.taxRate })
+		});
 	}
 }
 

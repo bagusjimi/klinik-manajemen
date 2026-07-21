@@ -51,10 +51,14 @@ export async function POST({ request, platform }) {
 	const tax = Math.round(subtotal * (taxRate / 100));
 	const total = subtotal + tax;
 
+	// Look up patient name before insert
+	const patient = await db.prepare('SELECT name FROM patients WHERE id=?').bind(data.patient_id).first();
+	const patientName = (patient?.name as string) ?? '';
+
 	await db.prepare(
-		`INSERT INTO invoices (id, appointment_id, patient_id, date, subtotal, tax, total, status)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-	).bind(id, data.appointment_id, data.patient_id, data.date, subtotal, tax, total, 'Unpaid').run();
+		`INSERT INTO invoices (id, appointment_id, patient_id, patient_name, date, subtotal, tax, total, status)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	).bind(id, data.appointment_id, data.patient_id, patientName, data.date, subtotal, tax, total, 'Unpaid').run();
 
 	// Insert invoice items
 	for (const item of data.items) {
@@ -63,14 +67,11 @@ export async function POST({ request, platform }) {
 		).bind(id, item.name, item.price).run();
 	}
 
-	// Return with joined names
-	const patient = await db.prepare('SELECT name FROM patients WHERE id=?').bind(data.patient_id).first();
-
 	return json({
 		id,
 		appointment_id: data.appointment_id,
 		patient_id: data.patient_id,
-		patient_name: patient?.name,
+		patient_name: patientName,
 		date: data.date,
 		items: data.items,
 		subtotal,

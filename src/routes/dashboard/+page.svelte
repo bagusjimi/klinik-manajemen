@@ -1,23 +1,23 @@
 <script lang="ts">
 	import { clinicStore, type Patient, type Doctor, type Appointment, type MedicalRecord, type Invoice, type InvoiceItem } from '$lib/store.svelte.ts';
-	import { 
-		Users, 
-		Calendar, 
-		DollarSign, 
-		Activity, 
-		FileText, 
-		Stethoscope, 
-		LogOut, 
-		Search, 
-		Plus, 
-		Edit, 
-		Trash2, 
-		Check, 
-		X, 
-		Printer, 
-		Clock, 
-		ChevronRight, 
-		CreditCard, 
+	import {
+		Users,
+		Calendar,
+		DollarSign,
+		Activity,
+		FileText,
+		Stethoscope,
+		LogOut,
+		Search,
+		Plus,
+		Edit,
+		Trash2,
+		Check,
+		X,
+		Printer,
+		Clock,
+		ChevronRight,
+		CreditCard,
 		AlertTriangle,
 		UserCheck,
 		Filter,
@@ -25,6 +25,10 @@
 		ClipboardList,
 		UserPlus
 	} from 'lucide-svelte';
+	import Toast from '$lib/components/Toast.svelte';
+	import Skeleton from '$lib/components/Skeleton.svelte';
+	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
+	import { toast } from '$lib/components/toast-store';
 
 	// Loading & Error state for async operations
 	let isLoading = $state(false);
@@ -89,9 +93,35 @@
 		try {
 			await clinicStore.updateTaxRate(newValue);
 		} catch (err: any) {
-			localTaxRate = clinicStore.taxRate; // revert on error
-			alert(err?.message || 'Gagal memperbarui tarif pajak.');
+			localTaxRate = clinicStore.taxRate;
+			toast.error(err?.message || 'Gagal memperbarui tarif pajak.');
 		}
+	}
+
+	// Confirm Dialog state
+	let confirmOpen = $state(false);
+	let confirmTitle = $state('Konfirmasi');
+	let confirmMessage = $state('');
+	let confirmType: 'default' | 'danger' = $state('default');
+	let confirmText = $state('Ya');
+	let cancelText = $state('Batal');
+	let confirmResolve: ((value: boolean) => void) | null = null;
+
+	function showConfirm(title: string, message: string, type: 'default' | 'danger' = 'default', text = 'Ya', cancel = 'Batal'): Promise<boolean> {
+		confirmTitle = title;
+		confirmMessage = message;
+		confirmType = type;
+		confirmText = text;
+		cancelText = cancel;
+		confirmOpen = true;
+		return new Promise((resolve) => {
+			confirmResolve = resolve;
+		});
+	}
+
+	async function handleConfirmAction() {
+		confirmOpen = false;
+		confirmResolve?.(true);
 	}
 
 	// Computed Metrics for Dashboard Overview
@@ -198,7 +228,7 @@
 	async function savePatient(e: Event) {
 		e.preventDefault();
 		if (!patName || !patNik || !patDob || !patPhone) {
-			alert('Harap isi semua kolom wajib!');
+			toast.warning('Harap isi semua kolom wajib!');
 			return;
 		}
 
@@ -230,7 +260,7 @@
 			showPatientModal = false;
 		} catch (err: any) {
 			errorMessage = err?.message || 'Gagal menyimpan data pasien.';
-			alert(errorMessage);
+			toast.error(errorMessage);
 		} finally {
 			isLoading = false;
 		}
@@ -262,7 +292,7 @@
 	async function saveDoctor(e: Event) {
 		e.preventDefault();
 		if (!docName || !docSpecialty || !docSchedule || !docPhone) {
-			alert('Harap isi semua kolom wajib!');
+			toast.warning('Harap isi semua kolom wajib!');
 			return;
 		}
 
@@ -292,7 +322,7 @@
 			showDoctorModal = false;
 		} catch (err: any) {
 			errorMessage = err?.message || 'Gagal menyimpan data dokter.';
-			alert(errorMessage);
+			toast.error(errorMessage);
 		} finally {
 			isLoading = false;
 		}
@@ -342,7 +372,7 @@
 	async function saveOfflineRegistration(e: Event) {
 		e.preventDefault();
 		if (!offlineSelectedDoctorId || !offlineSelectedTimeSlot) {
-			alert('Harap pilih dokter dan slot waktu!');
+			toast.warning('Harap pilih dokter dan slot waktu!');
 			return;
 		}
 
@@ -353,7 +383,7 @@
 
 			if (offlinePatientType === 'new') {
 				if (!offlineNewPatName || !offlineNewPatNik || !offlineNewPatPhone) {
-					alert('Harap lengkapi data wajib pasien baru offline (Nama, NIK, No. Telp)!');
+					toast.warning('Harap lengkapi data wajib pasien baru offline (Nama, NIK, No. Telp)!');
 					return;
 				}
 				patient = await clinicStore.addPatient({
@@ -367,12 +397,12 @@
 				});
 			} else {
 				if (!offlineSelectedPatientId) {
-					alert('Harap pilih pasien terdaftar!');
+					toast.warning('Harap pilih pasien terdaftar!');
 					return;
 				}
 				const found = clinicStore.patients.find(p => p.id === offlineSelectedPatientId);
 				if (!found) {
-					alert('Pasien tidak ditemukan!');
+					toast.error('Pasien tidak ditemukan!');
 					return;
 				}
 				patient = found;
@@ -397,10 +427,10 @@
 			await clinicStore.updateAppointmentStatus(newApt.id, 'Confirmed');
 
 			showOfflineRegisterModal = false;
-			alert(`Pendaftaran offline pasien ${patient.name} berhasil!\n\nNOMOR ANTREAN: ${newApt.queueNumber}\n\nAntrean langsung Dikonfirmasi dan masuk jadwal dokter hari ini.`);
+			toast.success(`Pendaftaran offline pasien ${patient.name} berhasil! Nomor antrean: ${newApt.queueNumber}`);
 		} catch (err: any) {
 			errorMessage = err?.message || 'Gagal mendaftarkan pasien offline.';
-			alert(errorMessage);
+			toast.error(errorMessage);
 		} finally {
 			isLoading = false;
 		}
@@ -433,7 +463,7 @@
 	async function saveDiagnosisAndBill() {
 		if (!activeDiagnoseApt) return;
 		if (!diagnosisText || !prescriptionText) {
-			alert('Mohon isi Diagnosis dan Resep Obat!');
+			toast.warning('Mohon isi Diagnosis dan Resep Obat!');
 			return;
 		}
 
@@ -471,11 +501,11 @@
 
 			showDiagnoseModal = false;
 			activeDiagnoseApt = null;
-			alert('Pemeriksaan berhasil diselesaikan! Rekam medis dan tagihan baru telah dibuat.');
+			toast.success('Pemeriksaan berhasil diselesaikan! Rekam medis dan tagihan baru telah dibuat.');
 			activeTab = 'billing'; // Jump to cashier to see invoice!
 		} catch (err: any) {
 			errorMessage = err?.message || 'Gagal menyelesaikan pemeriksaan.';
-			alert(errorMessage);
+			toast.error(errorMessage);
 		} finally {
 			isLoading = false;
 		}
@@ -520,6 +550,29 @@
 		window.location.reload(); // Restore Svelte
 	}
 </script>
+
+<!-- Global Toast Notification -->
+<Toast />
+
+<!-- Confirm Dialog -->
+<ConfirmDialog
+	{confirmOpen}
+	{confirmTitle}
+	{confirmMessage}
+	{confirmType}
+	{confirmText}
+	{cancelText}
+	onconfirm={handleConfirmAction}
+	oncancel={() => { confirmOpen = false; confirmResolve?.(false); }}
+/>
+
+<!-- Global Loading State -->
+{#if clinicStore.loading}
+	<div class="global-loading-overlay">
+		<div class="spinner"></div>
+		<p>Memuat data...</p>
+	</div>
+{/if}
 
 <div class="dashboard-container">
 	<!-- SIDEBAR PANEL -->
@@ -818,8 +871,9 @@
 														<Edit size={14} />
 													</button>
 													<button class="action-icon-btn delete" onclick={async () => {
-														if(confirm(`Hapus pasien ${patient.name}?`)) {
+														if(await showConfirm('Hapus Pasien', `Hapus pasien ${patient.name}? Data tidak dapat dikembalikan.`, 'danger', 'Hapus')) {
 															await clinicStore.deletePatient(patient.id);
+															toast.success('Pasien berhasil dihapus.');
 														}
 													}}>
 														<Trash2 size={14} />
@@ -893,8 +947,9 @@
 												<Edit size={14} />
 											</button>
 											<button class="action-icon-btn delete" onclick={async () => {
-												if(confirm(`Hapus dokter ${doctor.name}?`)) {
+												if(await showConfirm('Hapus Dokter', `Hapus dokter ${doctor.name}?`, 'danger', 'Hapus')) {
 													await clinicStore.deleteDoctor(doctor.id);
+													toast.success('Dokter berhasil dihapus.');
 												}
 											}}>
 												<Trash2 size={14} />
@@ -1019,8 +1074,9 @@
 																	<button
 																		class="btn-text-danger text-danger btn-sm"
 																		onclick={async () => {
-																			if(confirm(`Batalkan janji temu ${apt.id}?`)) {
+																			if(await showConfirm('Batalkan Janji Temu', `Batalkan janji temu ${apt.id}?`, 'danger', 'Batalkan')) {
 																				await clinicStore.updateAppointmentStatus(apt.id, 'Cancelled');
+																				toast.info('Janji temu dibatalkan.');
 																			}
 																		}}
 																	>
@@ -1197,8 +1253,9 @@
 														<button
 															class="btn btn-outline btn-sm py-1 px-2"
 															onclick={async () => {
-																if(confirm(`Konfirmasi pembayaran tagihan ${inv.id}?`)) {
+																if(await showConfirm('Konfirmasi Pembayaran', `Konfirmasi pembayaran tagihan ${inv.id} sebagai lunas?`)) {
 																	await clinicStore.updateInvoiceStatus(inv.id, 'Paid');
+																	toast.success(`Tagihan ${inv.id} ditandai lunas.`);
 																}
 															}}
 														>
@@ -1689,6 +1746,39 @@
 {/if}
 
 <style>
+	/* Global Loading Overlay */
+	.global-loading-overlay {
+		position: fixed;
+		inset: 0;
+		background: rgba(248, 250, 252, 0.85);
+		backdrop-filter: blur(4px);
+		z-index: 9998;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 1rem;
+	}
+
+	.global-loading-overlay .spinner {
+		width: 40px;
+		height: 40px;
+		border: 4px solid hsl(var(--muted));
+		border-top-color: hsl(var(--primary));
+		border-radius: 50%;
+		animation: spin 0.8s linear infinite;
+	}
+
+	@keyframes spin {
+		to { transform: rotate(360deg); }
+	}
+
+	.global-loading-overlay p {
+		font-size: 0.875rem;
+		color: hsl(var(--muted-foreground));
+		font-weight: 500;
+	}
+
 	/* Universal Admin Dashboard Styling */
 	.text-teal { color: #0d9488; }
 	.py-4 { padding: 1.5rem 0; }

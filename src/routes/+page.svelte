@@ -1,26 +1,29 @@
 <script lang="ts">
 	import { clinicStore, type Appointment, type Patient } from '$lib/store.svelte.ts';
-	import { 
-		Activity, 
-		Calendar, 
-		Clock, 
-		User, 
-		Phone, 
-		Shield, 
-		HeartPulse, 
-		MapPin, 
-		Users, 
-		CheckCircle2, 
-		ArrowRight, 
-		Printer, 
-		Download, 
-		Stethoscope, 
-		Award, 
+	import {
+		Activity,
+		Calendar,
+		Clock,
+		User,
+		Phone,
+		Shield,
+		HeartPulse,
+		MapPin,
+		Users,
+		CheckCircle2,
+		ArrowRight,
+		Printer,
+		Download,
+		Stethoscope,
+		Award,
 		Smile,
 		AlertCircle,
 		Search,
 		BookOpen
 	} from 'lucide-svelte';
+	import Toast from '$lib/components/Toast.svelte';
+	import Skeleton from '$lib/components/Skeleton.svelte';
+	import { toast } from '$lib/components/toast-store';
 
 	// Booking form state
 	let selectedDoctorId = $state('');
@@ -91,7 +94,7 @@
 		e.preventDefault();
 
 		if (!selectedDoctorId || !bookingDate || !bookingTimeSlot || !patientName || !patientPhone || !patientNik) {
-			alert('Harap isi semua kolom yang wajib diisi!');
+			toast.warning('Harap isi semua kolom yang wajib diisi!');
 			return;
 		}
 
@@ -145,13 +148,16 @@
 			createdPatient = targetPatient;
 			createdAppointment = newApt;
 			bookingSuccess = true;
+			toast.success(`Pendaftaran berhasil! Nomor antrean: ${queueNumber}`);
 
 			// Scroll to success card
 			setTimeout(() => {
 				document.getElementById('booking-result')?.scrollIntoView({ behavior: 'smooth' });
 			}, 100);
 		} catch (err: any) {
-			bookingError = err?.message || 'Terjadi kesalahan saat memproses pendaftaran. Silakan coba lagi.';
+			const msg = err?.message || 'Terjadi kesalahan saat memproses pendaftaran. Silakan coba lagi.';
+			bookingError = msg;
+			toast.error(msg);
 		} finally {
 			isBooking = false;
 		}
@@ -218,6 +224,17 @@
 		window.location.reload(); // Reload to restore Svelte state
 	}
 </script>
+
+<!-- Global Toast Notification -->
+<Toast />
+
+<!-- Global Loading State -->
+{#if clinicStore.loading}
+	<div class="global-loading">
+		<div class="spinner"></div>
+		<p>Memuat data klinik...</p>
+	</div>
+{/if}
 
 <!-- HEADER / NAVIGATION -->
 <header class="main-header glass">
@@ -996,6 +1013,42 @@
 </footer>
 
 <style>
+	/* Global Loading Spinner */
+	.global-loading {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: rgba(248, 250, 252, 0.95);
+		backdrop-filter: blur(8px);
+		z-index: 9998;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 1rem;
+	}
+
+	.spinner {
+		width: 40px;
+		height: 40px;
+		border: 4px solid hsl(var(--muted));
+		border-top-color: hsl(var(--primary));
+		border-radius: 50%;
+		animation: spin 0.8s linear infinite;
+	}
+
+	@keyframes spin {
+		to { transform: rotate(360deg); }
+	}
+
+	.global-loading p {
+		font-size: 0.875rem;
+		color: hsl(var(--muted-foreground));
+		font-weight: 500;
+	}
+
 	/* Landing Page Specific Styling */
 	.text-primary { color: hsl(var(--primary)); }
 	.text-success { color: hsl(var(--success)); }
